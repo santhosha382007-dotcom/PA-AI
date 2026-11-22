@@ -221,6 +221,12 @@ function toggleVoiceInput() {
 }
 
 if (micBtn) micBtn.addEventListener("click", toggleVoiceInput);
+if (orbContainer) {
+  orbContainer.addEventListener("click", (e) => {
+    if (e.target && (e.target.id === "micBtn" || e.target.closest("#micBtn"))) return;
+    toggleVoiceInput();
+  });
+}
 
 // Text-to-Speech (TTS)
 function speakText(text) {
@@ -539,6 +545,199 @@ async function executeWeatherClient(queryText = "") {
   showToast(`🌤️ ${city}: ${temp}°C, ${desc}`);
 }
 
+// ========================================================
+// INSTANT CLIENT-SIDE OFFLINE INTELLIGENCE ENGINES
+// ========================================================
+
+const JARVIS_JOKES = [
+  "Why do programmers prefer dark mode? Because light attracts bugs, Sir.",
+  "There are only 10 types of people in the world: those who understand binary, and those who don't.",
+  "Why did the neural network cross the road? To optimize the loss function on the other side.",
+  "A SQL query walks into a bar, walks up to two tables and asks: 'Can I join you?'",
+  "Why was the JavaScript developer sad? Because they didn't know how to 'null' their feelings.",
+  "I told my computer I needed a break... Now it won't stop sending me Kit-Kats.",
+  "Artificial intelligence is no match for natural stupidity, Sir.",
+  "Hardware is the part of a computer that you can kick; software is the part you can only curse at.",
+  "I would tell you a UDP joke, but you might not get it.",
+  "Why did Tony Stark build JARVIS? Because even geniuses need someone to tell them their ideas are reckless.",
+  "An optimist sees the glass half full. A pessimist sees it half empty. An engineer sees that the glass is twice as big as it needs to be.",
+  "How many programmers does it take to change a lightbulb? None, that is a hardware problem.",
+  "To understand what recursion is, you must first understand recursion.",
+  "Why do Java programmers wear glasses? Because they don't C sharp.",
+  "There is no place like 127.0.0.1, Sir."
+];
+
+const JARVIS_QUOTES = [
+  "Sometimes you gotta run before you can walk. — Tony Stark",
+  "I am Iron Man. — Tony Stark",
+  "It's not about how much we lost. It's about how much we have left. — Tony Stark",
+  "No amount of money ever bought a second of time. — Tony Stark",
+  "Heroes are made by the path they choose, not the powers they are graced with. — Tony Stark",
+  "The truth is... I am Iron Man. — Tony Stark",
+  "We create our own demons. — Tony Stark",
+  "If you're nothing without the suit, then you shouldn't have it. — Tony Stark",
+  "The secret of getting ahead is getting started. — Mark Twain",
+  "Innovation distinguishes between a leader and a follower. — Steve Jobs",
+  "Genius is 1% inspiration and 99% perspiration. — Thomas Edison",
+  "The only way to do great work is to love what you do. — Steve Jobs"
+];
+
+function executeJokeClient() {
+  const joke = JARVIS_JOKES[Math.floor(Math.random() * JARVIS_JOKES.length)];
+  displayChat("Tell me a joke", joke, currentDeviceType);
+  speakText(joke);
+  showToast("😄 " + joke.substring(0, 42) + "...");
+}
+
+function executeQuoteClient() {
+  const quote = JARVIS_QUOTES[Math.floor(Math.random() * JARVIS_QUOTES.length)];
+  displayChat("Daily quote", quote, currentDeviceType);
+  speakText(quote);
+  showToast("💡 " + quote.substring(0, 42) + "...");
+}
+
+async function executeIpClient() {
+  showToast("🌐 Querying Public IP...");
+  let ip = "127.0.0.1";
+  try {
+    const res = await fetch("https://api.ipify.org?format=json");
+    if (res.ok) {
+      const data = await res.json();
+      ip = data.ip || ip;
+    }
+  } catch (e) {
+    try {
+      const res2 = await fetch("https://ipapi.co/json/");
+      if (res2.ok) {
+        const d2 = await res2.json();
+        ip = d2.ip || ip;
+      }
+    } catch (ignored) {}
+  }
+  const reply = `Your current public IP address is ${ip}, Sir.`;
+  displayChat("What is my IP", reply, currentDeviceType);
+  speakText(reply);
+  showToast("🌐 IP: " + ip);
+}
+
+async function executeNewsClient() {
+  showToast("📰 Fetching Top Headlines...");
+  let headlines = [
+    "DeepMind unveils next-generation agentic reasoning and adaptive autonomy models.",
+    "Global semiconductor technology reaches full 2nm mass production scale.",
+    "Space agencies complete quantum communications link between satellite constellations.",
+    "Renewable clean energy storage achieves record efficiency across international smart grids."
+  ];
+
+  try {
+    const res = await fetch("https://api.rss2json.com/v1/api.json?rss_url=https://news.google.com/rss?hl=en-IN&gl=IN&ceid=IN:en");
+    if (res.ok) {
+      const data = await res.json();
+      if (data.items && data.items.length > 0) {
+        headlines = data.items.slice(0, 4).map(i => i.title);
+      }
+    }
+  } catch (e) {
+    console.warn("News RSS fetch:", e);
+  }
+
+  const speech = `Here are the top headlines, Sir: First, ${headlines[0]}. Second, ${headlines[1] || headlines[0]}.`;
+  const formattedChat = "📰 TOP HEADLINES:\n" + headlines.map((h, i) => `${i + 1}. ${h}`).join("\n");
+  displayChat("Read news", formattedChat, currentDeviceType);
+  speakText(speech);
+  showToast("📰 Top news delivered");
+}
+
+function executeCalendarClient() {
+  const now = new Date();
+  const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+  const dateStr = now.toLocaleDateString(undefined, options);
+  const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const speech = `Today is ${dateStr}. The current system time is ${timeStr}, Sir.`;
+  const card = `📅 SYSTEM CHRONOLOGY:\n• Date: ${dateStr}\n• Time: ${timeStr}\n• Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`;
+  displayChat("Calendar", card, currentDeviceType);
+  speakText(speech);
+  showToast(`📅 ${dateStr}`);
+}
+
+function playIronManThemeSynth() {
+  showToast("🎵 Playing Iron Man Theme...");
+  displayChat("Play theme", "Initiating Iron Man audio sequence, Sir.", currentDeviceType);
+  speakText("Initiating Iron Man theme sequence, Sir.");
+
+  unlockAudioContext();
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    const ctx = new AudioCtx();
+    
+    // Iron Man heavy synthesizer riff
+    const notes = [
+      { f: 123.47, d: 0.35 },
+      { f: 146.83, d: 0.35 },
+      { f: 146.83, d: 0.18 },
+      { f: 164.81, d: 0.35 },
+      { f: 164.81, d: 0.35 },
+      { f: 196.00, d: 0.28 },
+      { f: 185.00, d: 0.28 },
+      { f: 196.00, d: 0.28 },
+      { f: 185.00, d: 0.28 },
+      { f: 146.83, d: 0.28 },
+      { f: 146.83, d: 0.18 },
+      { f: 164.81, d: 0.55 }
+    ];
+
+    let t = ctx.currentTime + 0.1;
+    notes.forEach((n) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const filter = ctx.createBiquadFilter();
+
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(n.f, t);
+
+      filter.type = "lowpass";
+      filter.frequency.setValueAtTime(1400, t);
+
+      gain.gain.setValueAtTime(0.35, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + n.d);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(t);
+      osc.stop(t + n.d);
+
+      t += n.d + 0.08;
+    });
+  } catch (e) {
+    console.warn("Theme synth error:", e);
+  }
+}
+
+function executeFolderClient(folder) {
+  const title = folder === "downloads" ? "Downloads" : "Documents";
+  showToast(`📁 Opening ${title} folder on PC...`);
+  const reply = `Dispatching command to open ${title} folder on synced PC companion, Sir.`;
+  displayChat("Open " + folder, reply, currentDeviceType);
+  speakText(reply);
+}
+
+function executeScreenshotClient() {
+  showToast("📸 Capturing Laptop Screenshot...");
+  const reply = "Requesting real-time desktop screenshot from synced laptop companion, Sir.";
+  displayChat("Take screenshot", reply, currentDeviceType);
+  speakText(reply);
+}
+
+function executeVibrateClient() {
+  triggerPhoneVibration([300, 100, 300, 100, 400]);
+  showToast("📳 Haptic pulse executed");
+  const reply = "Haptic vibration pulse activated on phone, Sir.";
+  displayChat("Vibrate phone", reply, currentDeviceType);
+  speakText(reply);
+}
+
 // Command Dispatcher (Hybrid Offline Client & Synced Remote)
 function sendCommand(queryText) {
   if (!queryText || !queryText.trim()) return;
@@ -550,7 +749,7 @@ function sendCommand(queryText) {
   if (neuralOrb) neuralOrb.setState("thinking");
   hudStatus.textContent = `PROCESSING: "${cleanQuery}"`;
 
-  // Check client-side direct execution for instant response
+  // 100% Instant Client-Side Direct Execution
   if (qLower.includes("stop alarm") || qLower.includes("silence alarm")) {
     stopAlarm();
     displayChat(cleanQuery, "Phone alarm silenced, Sir.", currentDeviceType);
@@ -563,6 +762,26 @@ function sendCommand(queryText) {
     showToast("🔔 Alarm Triggered");
   } else if (qLower.includes("weather") || qLower.includes("temperature")) {
     executeWeatherClient(cleanQuery);
+  } else if (qLower.includes("joke")) {
+    executeJokeClient();
+  } else if (qLower.includes("quote")) {
+    executeQuoteClient();
+  } else if (qLower.includes("what is my ip") || qLower.includes("public ip") || qLower === "ip") {
+    executeIpClient();
+  } else if (qLower.includes("news") || qLower.includes("headlines")) {
+    executeNewsClient();
+  } else if (qLower.includes("calendar") || qLower.includes("date") || qLower.includes("time")) {
+    executeCalendarClient();
+  } else if (qLower.includes("theme") || qLower.includes("music") || qLower.includes("iron man music")) {
+    playIronManThemeSynth();
+  } else if (qLower.includes("vibrate")) {
+    executeVibrateClient();
+  } else if (qLower.includes("open downloads") || qLower.includes("downloads")) {
+    executeFolderClient("downloads");
+  } else if (qLower.includes("open documents") || qLower.includes("documents")) {
+    executeFolderClient("documents");
+  } else if (qLower.includes("screenshot")) {
+    executeScreenshotClient();
   } else if (qLower.startsWith("call ") || qLower.startsWith("dial ")) {
     const num = cleanQuery.replace(/(?:call|dial)\s+/i, "").trim();
     if (window.AndroidBridge && window.AndroidBridge.makeCall) {
@@ -600,7 +819,12 @@ function sendCommand(queryText) {
     })
     .then(r => r.json())
     .then(data => {
-      if (!qLower.includes("weather") && !qLower.includes("stop alarm") && !qLower.includes("ring phone")) {
+      const isAlreadyHandledLocally = [
+        "weather", "stop alarm", "ring phone", "joke", "quote", "ip",
+        "news", "calendar", "theme", "music", "vibrate", "downloads", "documents", "screenshot"
+      ].some(k => qLower.includes(k));
+
+      if (!isAlreadyHandledLocally && (data.reply || data.response)) {
         displayChat(cleanQuery, data.reply || data.response, currentDeviceType);
         speakText(data.reply || data.response);
         showToast(`✓ ${(data.reply || data.response || "").substring(0, 45)}...`);
@@ -608,21 +832,6 @@ function sendCommand(queryText) {
     })
     .catch(err => {
       console.warn("Cloud fallback error:", err.message);
-    });
-  }
-
-  commandInput.value = "";
-}
-    })
-    .then(r => r.json())
-    .then(data => {
-      displayChat(data.query, data.response, currentDeviceType);
-      speakText(data.response);
-      showToast(`✓ ${data.response.substring(0, 45)}...`);
-    })
-    .catch(err => {
-      console.error("Command REST error:", err);
-      showToast("Error sending command to host");
     });
   }
 
