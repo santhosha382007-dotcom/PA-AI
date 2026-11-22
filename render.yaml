@@ -1,9 +1,10 @@
 services:
   - type: web
-    name: pa-ai-backend
-    runtime: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    name: pa-ai
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.9
+      - key: PORT
+        value: 10000

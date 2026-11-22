@@ -1,4 +1,21 @@
 // J.A.R.V.I.S Multi-Device Synced Companion Logic
+const CLOUD_HOST = "https://pa-ai-346x.onrender.com";
+const CLOUD_WS_HOST = "wss://pa-ai-346x.onrender.com";
+
+function getApiBaseUrl() {
+  if (window.location.protocol === "file:" || !window.location.host) {
+    return CLOUD_HOST;
+  }
+  return window.location.origin;
+}
+
+function getWsUrl() {
+  if (window.location.protocol === "file:" || !window.location.host) {
+    return `${CLOUD_WS_HOST}/ws/${currentDeviceType}?client_id=${Math.random().toString(36).substring(7)}`;
+  }
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  return `${protocol}//${window.location.host}/ws/${currentDeviceType}?client_id=${Math.random().toString(36).substring(7)}`;
+}
 
 let socket = null;
 let currentDeviceType = /Mobi|Android|iPhone/i.test(navigator.userAgent) ? "phone" : "laptop";
@@ -165,8 +182,29 @@ if (SpeechRecognition) {
   };
 }
 
+window.onNativeSpeechResult = function(transcript) {
+  if (!transcript) return;
+  if (hudStatus) hudStatus.textContent = `RECOGNIZED: "${transcript}"`;
+  if (micBtn) micBtn.classList.remove("listening");
+  if (neuralOrb) neuralOrb.setState("idle");
+  sendCommand(transcript);
+};
+
+window.onNativeSpeechError = function(code) {
+  if (hudStatus) hudStatus.textContent = `MIC STATUS: STANDBY (${code})`;
+  if (micBtn) micBtn.classList.remove("listening");
+  if (neuralOrb) neuralOrb.setState("idle");
+};
+
 function toggleVoiceInput() {
   unlockAudioContext();
+  if (window.AndroidBridge && window.AndroidBridge.startVoiceRecognition) {
+    hudStatus.textContent = "LISTENING... (SPEAK TO J.A.R.V.I.S)";
+    micBtn.classList.add("listening");
+    if (neuralOrb) neuralOrb.setState("listening");
+    window.AndroidBridge.startVoiceRecognition();
+    return;
+  }
   if (!recognition) {
     showToast("Speech recognition not supported in this browser. Please type command.");
     return;
@@ -186,6 +224,18 @@ if (micBtn) micBtn.addEventListener("click", toggleVoiceInput);
 
 // Text-to-Speech (TTS)
 function speakText(text) {
+  if (!text) return;
+
+  // Use Native Android TTS if available inside app
+  if (window.AndroidBridge && window.AndroidBridge.speak) {
+    if (neuralOrb) neuralOrb.setState("speaking");
+    window.AndroidBridge.speak(text);
+    setTimeout(() => {
+      if (neuralOrb) neuralOrb.setState("idle");
+    }, Math.max(1500, Math.min(8000, text.length * 60)));
+    return;
+  }
+
   if (!window.speechSynthesis) return;
   window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(text);
@@ -215,8 +265,7 @@ function speakText(text) {
 
 // WebSocket Connection
 function connectWebSocket() {
-  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  const wsUrl = `${protocol}//${window.location.host}/ws/${currentDeviceType}?client_id=${Math.random().toString(36).substring(7)}`;
+  const wsUrl = getWsUrl();
 
   socket = new WebSocket(wsUrl);
 
@@ -328,6 +377,20 @@ function updateLaptopTelemetry(stats) {
 
 // Battery Reporting (for Phone mode)
 function reportPhoneBattery() {
+  if (window.AndroidBridge && window.AndroidBridge.getBatteryLevel) {
+    try {
+      const level = window.AndroidBridge.getBatteryLevel() + "%";
+      phoneBattery.textContent = level;
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({
+          type: "PHONE_BATTERY_UPDATE",
+          battery: { level: level, charging: true }
+        }));
+      }
+      return;
+    } catch (ignored) {}
+  }
+
   if (navigator.getBattery) {
     navigator.getBattery().then((battery) => {
       const level = Math.round(battery.level * 100) + "%";
@@ -345,12 +408,19 @@ function reportPhoneBattery() {
   }
 }
 
-// Sound & Alarm Synthesizer (Works on any Mobile Browser via Web Audio API)
+// Sound & Alarm Synthesizer (Works on any Mobile Browser via Web Audio API or Native Java)
 function triggerPhoneAlarm() {
   alarmBanner.classList.remove("hidden");
   if (btnStopAlarm) btnStopAlarm.classList.add("btn-pulsing");
   triggerPhoneVibration([500, 200, 500, 200, 500]);
   unlockAudioContext();
+
+  if (window.AndroidBridge && window.AndroidBridge.ringAlarm) {
+    try {
+      window.AndroidBridge.ringAlarm();
+      return;
+    } catch (ignored) {}
+  }
 
   try {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -358,7 +428,6 @@ function triggerPhoneAlarm() {
       alarmAudioContext = new AudioContext();
     }
     
-    // Play pulsing high-frequency alarm tone
     let freqToggle = false;
     if (alarmInterval) clearInterval(alarmInterval);
     alarmInterval = setInterval(() => {
@@ -394,6 +463,12 @@ function stopAlarm() {
     alarmInterval = null;
   }
   if (btnStopAlarm) btnStopAlarm.classList.remove("btn-pulsing");
+
+  if (window.AndroidBridge && window.AndroidBridge.stopAlarm) {
+    try {
+      window.AndroidBridge.stopAlarm();
+    } catch (ignored) {}
+  }
 }
 
 silenceAlarmBtn.addEventListener("click", () => {
@@ -402,21 +477,114 @@ silenceAlarmBtn.addEventListener("click", () => {
 });
 
 function triggerPhoneVibration(pattern) {
+  if (window.AndroidBridge && window.AndroidBridge.vibrate) {
+    try {
+      const dur = Array.isArray(pattern) ? pattern[0] : (typeof pattern === "number" ? pattern : 500);
+      window.AndroidBridge.vibrate(dur);
+      return;
+    } catch (ignored) {}
+  }
   if (navigator.vibrate) {
     navigator.vibrate(pattern);
   }
 }
 
-// Command Dispatcher
+// Client-Side Offline Weather Engine (Location First, API Key 8ff79568e0fbdffe1104aefc40895e42)
+async function executeWeatherClient(queryText = "") {
+  showToast("🌤️ Detecting location & weather...");
+  let city = "Chennai";
+  let state = "Tamil Nadu";
+  let country = "India";
+  let lat = 13.0878;
+  let lon = 80.2785;
+
+  try {
+    const ipRes = await fetch("https://ipapi.co/json/");
+    if (ipRes.ok) {
+      const d = await ipRes.json();
+      city = d.city || city;
+      state = d.region || state;
+      country = d.country_name || country;
+      if (d.latitude && d.longitude) {
+        lat = d.latitude;
+        lon = d.longitude;
+      }
+    }
+  } catch (e) {
+    console.warn("IP geolocation:", e);
+  }
+
+  let temp = 28;
+  let desc = "partly cloudy";
+  let humidity = 65;
+  let wind = 12;
+
+  try {
+    const owmUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=8ff79568e0fbdffe1104aefc40895e42&units=metric`;
+    const res = await fetch(owmUrl);
+    if (res.ok) {
+      const data = await res.json();
+      temp = Math.round(data.main.temp);
+      desc = data.weather[0].description;
+      humidity = data.main.humidity;
+      wind = Math.round(data.wind.speed * 3.6);
+    }
+  } catch (e) {
+    console.warn("OpenWeatherMap fetch:", e);
+  }
+
+  const speech = `Accessing sensors for ${city}, ${state}, ${country}. Currently it is ${temp} degrees Celsius with ${desc}. Humidity is at ${humidity} percent, with winds traveling at ${wind} kilometers per hour.`;
+  displayChat(queryText || "Weather", speech, currentDeviceType);
+  speakText(speech);
+  showToast(`🌤️ ${city}: ${temp}°C, ${desc}`);
+}
+
+// Command Dispatcher (Hybrid Offline Client & Synced Remote)
 function sendCommand(queryText) {
   if (!queryText || !queryText.trim()) return;
 
   unlockAudioContext();
   const cleanQuery = queryText.trim();
+  const qLower = cleanQuery.toLowerCase();
 
   if (neuralOrb) neuralOrb.setState("thinking");
   hudStatus.textContent = `PROCESSING: "${cleanQuery}"`;
 
+  // Check client-side direct execution for instant response
+  if (qLower.includes("stop alarm") || qLower.includes("silence alarm")) {
+    stopAlarm();
+    displayChat(cleanQuery, "Phone alarm silenced, Sir.", currentDeviceType);
+    speakText("Phone alarm silenced, Sir.");
+    showToast("🔕 Alarm Silenced");
+  } else if (qLower.includes("ring phone") || (qLower.includes("alarm") && !qLower.includes("stop"))) {
+    triggerPhoneAlarm();
+    displayChat(cleanQuery, "Phone alarm ringing, Sir.", currentDeviceType);
+    speakText("Phone alarm ringing, Sir.");
+    showToast("🔔 Alarm Triggered");
+  } else if (qLower.includes("weather") || qLower.includes("temperature")) {
+    executeWeatherClient(cleanQuery);
+  } else if (qLower.startsWith("call ") || qLower.startsWith("dial ")) {
+    const num = cleanQuery.replace(/(?:call|dial)\s+/i, "").trim();
+    if (window.AndroidBridge && window.AndroidBridge.makeCall) {
+      window.AndroidBridge.makeCall(num);
+    }
+    const reply = `Dialing ${num}, Sir.`;
+    displayChat(cleanQuery, reply, currentDeviceType);
+    speakText(reply);
+  } else if (qLower.startsWith("calculate ") || (qLower.startsWith("what is ") && /\d/.test(qLower))) {
+    const expr = cleanQuery.replace(/(?:calculate|what is)\s+/i, "").trim();
+    try {
+      const cleanExpr = expr.replace(/[^0-9+\-*/().%^e\s]/g, "");
+      const res = Function(`'use strict'; return (${cleanExpr})`)();
+      const reply = `The calculation result is ${res}`;
+      displayChat(cleanQuery, reply, currentDeviceType);
+      speakText(reply);
+    } catch (e) {
+      displayChat(cleanQuery, "Could not compute calculation, Sir.", currentDeviceType);
+    }
+  }
+
+  // Also broadcast over WebSocket if open for multi-device sync
   if (socket && socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify({
       type: "COMMAND",
@@ -424,11 +592,27 @@ function sendCommand(queryText) {
       source_device: currentDeviceType
     }));
   } else {
-    // Immediate fallback to REST API
-    fetch("/api/command", {
+    // Fallback to REST API
+    fetch(`${getApiBaseUrl()}/api/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query: cleanQuery, source_device: currentDeviceType })
+      body: JSON.stringify({ message: cleanQuery, source_device: currentDeviceType })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (!qLower.includes("weather") && !qLower.includes("stop alarm") && !qLower.includes("ring phone")) {
+        displayChat(cleanQuery, data.reply || data.response, currentDeviceType);
+        speakText(data.reply || data.response);
+        showToast(`✓ ${(data.reply || data.response || "").substring(0, 45)}...`);
+      }
+    })
+    .catch(err => {
+      console.warn("Cloud fallback error:", err.message);
+    });
+  }
+
+  commandInput.value = "";
+}
     })
     .then(r => r.json())
     .then(data => {
