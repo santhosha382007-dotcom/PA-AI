@@ -1,18 +1,26 @@
 import os
 import requests
 import json
-import pyttsx3
-
 NEWS_API_KEY = os.getenv('NEWS_API_KEY', 'f9e9b9355f3e4334a20d16a09b39d72d')
 
-engine = pyttsx3.init()
-voices = engine.getProperty('voices')
-engine.setProperty('voice', voices[0].id)
+try:
+    import pyttsx3
+    engine = pyttsx3.init()
+    voices = engine.getProperty('voices')
+    engine.setProperty('voice', voices[0].id)
+except Exception:
+    engine = None
 
 
 def speak(audio):
-    engine.say(audio)
-    engine.runAndWait()
+    if engine:
+        try:
+            engine.say(audio)
+            engine.runAndWait()
+        except Exception:
+            pass
+    else:
+        print(f"[News]: {audio}")
 
 
 def speak_news():

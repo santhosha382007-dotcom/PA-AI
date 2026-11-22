@@ -1,17 +1,37 @@
 from difflib import get_close_matches
-import pyttsx3
+import os
 import json
-import speech_recognition as sr
 
-data = json.load(open('data.json'))
-engine = pyttsx3.init()
-voices = engine.getProperty('voices')
-engine.setProperty('voice', voices[0].id)
+try:
+    import pyttsx3
+    engine = pyttsx3.init()
+    voices = engine.getProperty('voices')
+    engine.setProperty('voice', voices[0].id)
+except Exception:
+    engine = None
+
+try:
+    import speech_recognition as sr
+except Exception:
+    sr = None
+
+data_path = os.path.join(os.path.dirname(__file__), 'data.json')
+try:
+    with open(data_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+except Exception:
+    data = {}
 
 
 def speak(audio):
-    engine.say(audio)
-    engine.runAndWait()
+    if engine:
+        try:
+            engine.say(audio)
+            engine.runAndWait()
+        except Exception:
+            pass
+    else:
+        print(f"[Dict]: {audio}")
 
 
 def takeCommand():
