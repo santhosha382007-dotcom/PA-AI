@@ -1,0 +1,99 @@
+[
+  {
+    "call_id": "call_1795273819_gaurav",
+    "recipient_name": "Gaurav",
+    "recipient_number": "+919876543210",
+    "direction": "outbound",
+    "state": "disconnected",
+    "start_time": "2026-11-21 20:40:19",
+    "backend": "simulator",
+    "end_time": "2026-11-21 20:40:22"
+  },
+  {
+    "call_id": "call_1795273822_mom",
+    "recipient_name": "Mom",
+    "recipient_number": "+919988776655",
+    "direction": "outbound",
+    "state": "dialing",
+    "start_time": "2026-11-21 20:40:22",
+    "backend": "simulator"
+  },
+  {
+    "call_id": "call_1795274848_mom",
+    "recipient_name": "Mom",
+    "recipient_number": "+919988776655",
+    "direction": "outbound",
+    "state": "disconnected",
+    "start_time": "2026-11-21 20:57:28",
+    "backend": "simulator",
+    "end_time": "2026-11-21 20:57:32"
+  },
+  {
+    "call_id": "call_1795275672_9894181886",
+    "recipient_name": "9894181886",
+    "recipient_number": "9894181886",
+    "direction": "outbound",
+    "state": "dialing",
+    "start_time": "2026-11-21 21:11:12",
+    "backend": "simulator"
+  },
+  {
+    "call_id": "call_1795275692_mom",
+    "recipient_name": "Mom",
+    "recipient_number": "+919988776655",
+    "direction": "outbound",
+    "state": "dialing",
+    "start_time": "2026-11-21 21:11:32",
+    "backend": "simulator"
+  },
+  {
+    "call_id": "call_1795275695_mom",
+    "recipient_name": "Mom",
+    "recipient_number": "+919988776655",
+    "direction": "outbound",
+    "state": "disconnected",
+    "start_time": "2026-11-21 21:11:35",
+    "backend": "simulator",
+    "end_time": "2026-11-21 21:11:54"
+  },
+  {
+    "call_id": "call_1795275698_mom",
+    "recipient_name": "Mom",
+    "recipient_number": "+919988776655",
+    "direction": "outbound",
+    "state": "disconnected",
+    "start_time": "2026-11-21 21:11:38",
+    "backend": "simulator",
+    "end_time": "2026-11-21 21:11:44"
+  },
+  {
+    "call_id": "call_1795275701_mom",
+    "recipient_name": "Mom",
+    "recipient_number": "+919988776655",
+    "direction": "outbound",
+    "state": "disconnected",
+    "start_time": "2026-11-21 21:11:41",
+    "backend": "simulator",
+    "end_time": "2026-11-21 21:11:44"
+  },
+  {
+    "call_id": "call_1795275726_9894181886",
+    "recipient_name": "9894181886",
+    "recipient_number": "9894181886",
+    "direction": "outbound",
+    "state": "disconnected",
+    "start_time": "2026-11-21 21:12:06",
+    "backend": "simulator",
+    "end_time": "2026-11-21 21:13:11"
+  },
+  {
+    "call_id": "call_1795278012_mom",
+    "recipient_name": "Mom",
+    "recipient_number": "+919988776655",
+    "direction": "outbound",
+    "state": "disconnected",
+    "start_time": "2026-11-21 21:50:12",
+    "backend": "simulator",
+    "end_time": "2026-11-21 21:50:15"
+  }
+]

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#050b14">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>J.A.R.V.I.S Synced Hub</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+</head>
+<body>
+  <div class="hud-container">
+    <!-- Header -->
+    <header class="hud-header">
+      <div class="logo-area">
+        <div class="arc-mini"></div>
+        <div class="title-wrap">
+          <h1 id="brandTitle">J.A.R.V.I.S</h1>
+          <span class="subtitle">MULTI-DEVICE SYNCED HUB</span>
+        </div>
+      </div>
+      <div class="header-status">
+        <button id="personaToggleBtn" class="hud-btn btn-small" title="Switch between JARVIS and FRIDAY">🤖 J.A.R.V.I.S</button>
+        <span id="connectionBadge" class="badge badge-disconnected">DISCONNECTED</span>
+        <select id="deviceSelector" class="device-select">
+          <option value="phone">📱 Mode: Phone</option>
+          <option value="laptop">💻 Mode: Laptop</option>
+        </select>
+      </div>
+    </header>
+
+    <!-- 3D Interactive Glowing Particle Neural Orb (Video Style) -->
+    <section class="reactor-section">
+      <div class="orb-container" id="orbContainer" title="Tap Neural Orb to Speak">
+        <canvas id="orbCanvas"></canvas>
+        <div class="orb-center-badge" id="micBtn" title="Tap to Toggle Voice Input">
+          <svg class="mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+            <line x1="12" y1="19" x2="12" y2="23"></line>
+            <line x1="8" y1="23" x2="16" y2="23"></line>
+          </svg>
+        </div>
+        <div class="orb-halo"></div>
+      </div>
+      <p id="hudStatus" class="hud-status">TAP NEURAL ORB TO ACTIVATE</p>
+    </section>
+
+    <!-- Telemetry Cards -->
+    <section class="telemetry-grid">
+      <div class="telemetry-card">
+        <div class="card-label">💻 LAPTOP CPU</div>
+        <div class="card-value" id="laptopCpu">--%</div>
+      </div>
+      <div class="telemetry-card">
+        <div class="card-label">💻 LAPTOP BATTERY</div>
+        <div class="card-value" id="laptopBattery">--%</div>
+      </div>
+      <div class="telemetry-card">
+        <div class="card-label">📱 PHONE BATTERY</div>
+        <div class="card-value" id="phoneBattery">--%</div>
+      </div>
+      <div class="telemetry-card">
+        <div class="card-label">🔗 CONNECTED</div>
+        <div class="card-value" id="deviceCount">0</div>
+      </div>
+    </section>
+
+    <!-- Mobile Calling System (OpenLine + PocketDaemon) -->
+    <section class="calling-section">
+      <div class="section-header">
+        <h3>📱 MOBILE CALLING SYSTEM</h3>
+        <span id="openlineBadge" class="badge badge-connected">SIM GATEWAY READY</span>
+      </div>
+      
+      <!-- Active Call Alert Card -->
+      <div id="activeCallCard" class="active-call-card hidden">
+        <div class="call-info">
+          <div class="call-pulse"></div>
+          <div>
+            <h4 id="activeCallName">Connecting...</h4>
+            <span id="activeCallNumber" class="text-dim"></span>
+            <span id="activeCallStatus" class="call-badge">DIALING</span>
+          </div>
+        </div>
+        <div class="call-actions">
+          <button id="btnAnswerCall" class="hud-btn btn-primary hidden">Answer</button>
+          <button id="btnHangupCall" class="hud-btn btn-danger">🔴 End Call</button>
+        </div>
+      </div>
+
+      <div class="dialpad-bar">
+        <input type="text" id="callDestinationInput" placeholder="Enter phone number or contact (e.g. Mom, Gaurav, Manohar)...">
+        <button id="btnDialCall" class="hud-btn btn-primary">📞 CALL</button>
+      </div>
+
+      <div class="quick-contacts">
+        <span class="text-dim">Quick Contacts:</span>
+        <button class="contact-chip" onclick="dialTarget('Mom')">Mom</button>
+        <button class="contact-chip" onclick="dialTarget('Gaurav')">Gaurav</button>
+        <button class="contact-chip" onclick="dialTarget('Manohar')">Manohar</button>
+        <button class="contact-chip" onclick="dialTarget('112')">🚨 Emergency 112</button>
+      </div>
+    </section>
+
+    <!-- PC Hardware Controls (MAbitha1/jarvis-) -->
+    <section class="pc-controls-section">
+      <h3>💻 PC HARDWARE & FAST ACCESS</h3>
+      <div class="pc-controls-grid">
+        <div class="control-box">
+          <label>🔊 Master Volume</label>
+          <div class="range-wrap">
+            <input type="range" id="volSlider" min="0" max="100" value="50">
+            <span id="volValue">50%</span>
+            <button id="btnToggleMute" class="hud-btn btn-small">Mute</button>
+          </div>
+        </div>
+        <div class="control-box">
+          <label>☀️ Screen Brightness</label>
+          <div class="range-wrap">
+            <input type="range" id="brightSlider" min="0" max="100" value="70">
+            <span id="brightValue">70%</span>
+          </div>
+        </div>
+        <div class="control-box">
+          <label>📶 Wi-Fi & Theme</label>
+          <div class="btn-group">
+            <button id="btnToggleWifi" class="hud-btn btn-small">Wi-Fi: Toggle</button>
+            <button id="btnToggleDark" class="hud-btn btn-small">Dark Mode: Toggle</button>
+          </div>
+        </div>
+        <div class="control-box">
+          <label>📂 Fast Folders (PC)</label>
+          <div class="btn-group">
+            <button id="btnFolderDownloads" class="hud-btn btn-small">📥 Downloads</button>
+            <button id="btnFolderDocs" class="hud-btn btn-small">📄 Documents</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Remote Actions Toolbar -->
+    <section class="actions-section">
+      <h3>REMOTE COMMANDS</h3>
+      <div class="buttons-grid">
+        <button id="btnRingPhone" class="hud-btn btn-warning">🔔 Ring Phone</button>
+        <button id="btnStopAlarm" class="hud-btn btn-danger">🔕 Stop Alarm</button>
+        <button id="btnVibratePhone" class="hud-btn">📳 Vibrate Phone</button>
+        <button id="btnScreenshot" class="hud-btn">📸 Laptop Screenshot</button>
+        <button id="btnNews" class="hud-btn">📰 Read News</button>
+        <button id="btnWeather" class="hud-btn">🌤️ Weather</button>
+        <button id="btnJoke" class="hud-btn">😄 Tell Joke</button>
+        <button id="btnTheme" class="hud-btn">🎵 Iron Man Music</button>
+        <button id="btnQuote" class="hud-btn">💡 Daily Quote</button>
+        <button id="btnCalc" class="hud-btn">🧮 Calculate</button>
+        <button id="btnIp" class="hud-btn">🌐 Public IP</button>
+        <button id="btnCalendar" class="hud-btn">📅 Calendar</button>
+      </div>
+    </section>
+
+    <!-- Query & Response Display -->
+    <section class="chat-section">
+      <div class="chat-input-bar">
+        <input type="text" id="commandInput" placeholder="Type or speak a command (e.g. 'call mom', 'volume 70', 'news', 'dark mode')...">
+        <button id="sendBtn" class="hud-btn btn-primary">SEND</button>
+      </div>
+      <div id="chatLog" class="chat-log"></div>
+    </section>
+
+    <!-- Synced Notes / Reminders -->
+    <section class="notes-section">
+      <div class="notes-header">
+        <h3>📝 SYNCED MEMORY & REMINDERS</h3>
+        <button id="refreshNotesBtn" class="hud-btn btn-small">REFRESH</button>
+      </div>
+      <div class="note-input-wrap">
+        <input type="text" id="newNoteInput" placeholder="New note / memory to sync across all devices...">
+        <button id="addNoteBtn" class="hud-btn btn-primary btn-small">ADD</button>
+      </div>
+      <div id="notesList" class="notes-list">
+        <div class="empty-notes">No synced notes yet.</div>
+      </div>
+    </section>
+
+    <!-- Interactive Calculate Modal -->
+    <div id="calcModal" class="modal">
+      <div class="modal-content modal-calc">
+        <div class="modal-header">
+          <h3>🧮 J.A.R.V.I.S COMPUTATION CORE</h3>
+          <span class="close-btn" id="closeCalcModal">&times;</span>
+        </div>
+        <p class="modal-subtitle">WolframAlpha & High-Precision Math Engine</p>
+        <div class="calc-input-wrap">
+          <input type="text" id="calcInput" placeholder="Enter calculation (e.g. '15 * 84', 'sqrt(1024)')...">
+          <button id="btnExecuteCalc" class="hud-btn btn-primary">COMPUTE</button>
+        </div>
+        <div class="calc-chips">
+          <button class="chip" onclick="setCalcPrompt('15 * 84')">15 * 84</button>
+          <button class="chip" onclick="setCalcPrompt('sqrt(1024)')">sqrt(1024)</button>
+          <button class="chip" onclick="setCalcPrompt('2^16')">2^16</button>
+          <button class="chip" onclick="setCalcPrompt('distance from earth to moon')">Earth to Moon</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Screenshot Modal -->
+    <div id="screenshotModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>📸 LAPTOP SCREENSHOT</h3>
+          <span class="close-btn" id="closeModal">&times;</span>
+        </div>
+        <img id="screenshotImg" src="" alt="Latest Laptop Screenshot">
+      </div>
+    </div>
+
+    <!-- Active Alarm Banner -->
+    <div id="alarmBanner" class="alarm-banner hidden">
+      <div class="alarm-content">
+        <h2>🚨 PHONE ALARM TRIGGERED BY J.A.R.V.I.S 🚨</h2>
+        <button id="silenceAlarmBtn" class="hud-btn btn-danger">SILENCE ALARM</button>
+      </div>
+    </div>
+
+    <!-- HUD Floating Toast Notification -->
+    <div id="hudToast" class="hud-toast hidden"></div>
+
+    <!-- Hidden Companion Audio Streamer -->
+    <audio id="companionAudioPlayer" preload="auto"></audio>
+  </div>
+
+  <!-- Scripts -->
+  <script src="three.min.js"></script>
+  <script src="orb.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
