@@ -228,45 +228,99 @@ if (orbContainer) {
   });
 }
 
-// Text-to-Speech (TTS)
+// Text-to-Speech (TTS) Engine - Natural, Cleaned & GC-Protected
+let cachedVoices = [];
+if (typeof window !== "undefined" && window.speechSynthesis) {
+  cachedVoices = window.speechSynthesis.getVoices();
+  window.speechSynthesis.onvoiceschanged = () => {
+    cachedVoices = window.speechSynthesis.getVoices();
+  };
+}
+
+function cleanSpeechText(raw) {
+  if (!raw) return "";
+  return raw
+    .replace(/[\u{1F300}-\u{1F9FF}]|[\u{1F600}-\u{1F64F}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F1E0}-\u{1F1FF}]/gu, "")
+    .replace(/[*#_~`>]/g, "")
+    .replace(/^[•\-\d+\.]+\s+/gm, "")
+    .replace(/https?:\/\/\S+/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function speakText(text) {
   if (!text) return;
+  const clean = cleanSpeechText(text);
+  if (!clean) return;
 
-  // Use Native Android TTS if available inside app
+  unlockAudioContext();
+
+  // 1. Native Android TTS (via Java Bridge)
   if (window.AndroidBridge && window.AndroidBridge.speak) {
     if (neuralOrb) neuralOrb.setState("speaking");
-    window.AndroidBridge.speak(text);
-    setTimeout(() => {
-      if (neuralOrb) neuralOrb.setState("idle");
-    }, Math.max(1500, Math.min(8000, text.length * 60)));
+    window.AndroidBridge.speak(clean);
     return;
   }
 
+  // 2. Browser Web Speech Synthesis
   if (!window.speechSynthesis) return;
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  const voices = window.speechSynthesis.getVoices();
 
-  if (currentPersona === "FRIDAY") {
-    const femaleVoice = voices.find(v => /female|zira|samantha|victoria|karen/i.test(v.name));
-    if (femaleVoice) utterance.voice = femaleVoice;
-    utterance.pitch = 1.3;
-    utterance.rate = 1.0;
-  } else {
-    const maleVoice = voices.find(v => /male|david|george|alex/i.test(v.name));
-    if (maleVoice) utterance.voice = maleVoice;
-    utterance.pitch = 0.95;
-    utterance.rate = 1.05;
+  try {
+    if (window.speechSynthesis.paused) {
+      window.speechSynthesis.resume();
+    }
+
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+    }
+
+    setTimeout(() => {
+      try {
+        const utterance = new SpeechSynthesisUtterance(clean);
+        window.activeTtsUtterance = utterance; // Prevent Chrome V8 garbage collection
+
+        const voices = cachedVoices.length > 0 ? cachedVoices : window.speechSynthesis.getVoices();
+
+        if (currentPersona === "FRIDAY") {
+          const femaleVoice = voices.find(v => /female|zira|samantha|victoria|karen/i.test(v.name)) ||
+                              voices.find(v => v.lang.startsWith("en") && /female/i.test(v.name));
+          if (femaleVoice) utterance.voice = femaleVoice;
+          utterance.pitch = 1.25;
+          utterance.rate = 1.0;
+        } else {
+          // J.A.R.V.I.S persona: British / refined deep AI tone
+          const jarvisVoice = voices.find(v => /uk english male|daniel|george|david|alex/i.test(v.name)) ||
+                              voices.find(v => /en-GB/i.test(v.lang) && /male/i.test(v.name)) ||
+                              voices.find(v => v.lang.startsWith("en"));
+          if (jarvisVoice) utterance.voice = jarvisVoice;
+          utterance.pitch = 0.92;
+          utterance.rate = 1.05;
+        }
+
+        utterance.onstart = () => {
+          if (neuralOrb) neuralOrb.setState("speaking");
+        };
+
+        utterance.onend = () => {
+          if (neuralOrb) neuralOrb.setState("idle");
+          window.activeTtsUtterance = null;
+        };
+
+        utterance.onerror = (e) => {
+          console.warn("TTS utterance error:", e);
+          if (neuralOrb) neuralOrb.setState("idle");
+          window.activeTtsUtterance = null;
+        };
+
+        window.speechSynthesis.speak(utterance);
+      } catch (err) {
+        console.warn("Speech synthesis error:", err);
+      }
+    }, 40);
+
+  } catch (e) {
+    console.warn("TTS speakText exception:", e);
   }
-
-  utterance.onstart = () => {
-    if (neuralOrb) neuralOrb.setState("speaking");
-  };
-  utterance.onend = () => {
-    if (neuralOrb) neuralOrb.setState("idle");
-  };
-
-  window.speechSynthesis.speak(utterance);
 }
 
 // WebSocket Connection
